@@ -6,18 +6,8 @@ services:
     container_name: backend
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/mydatabase
-    depends_on:
-      - db
-
-  frontend:
-    build: ./frontend
-    container_name: frontend
-    ports:
-      - "8501:8501"
-    depends_on:
-      - backend
+    volumes:
+      - ./data:/app/data
 
   db:
     image: postgres:15
@@ -32,6 +22,14 @@ services:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
 
   prometheus:
     build: ./monitoring
@@ -48,6 +46,22 @@ services:
       - "3200:3000"
     depends_on:
       - prometheus
+    volumes:
+      - ./data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+
+  mlflow:
+    build: ./mlflow
+    container_name: mlflow
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://user:password@db:5432/mydatabase
+      - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
+    command: mlflow server --backend-store-uri postgresql://user:password@db:5432/mydatabase --default-artifact-root /mlflow/artifacts --host 0.0.0.0 --port 5000
 
 volumes:
   postgres_data:
+  mlflow_data:
