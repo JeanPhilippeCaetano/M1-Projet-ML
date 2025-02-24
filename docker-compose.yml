@@ -9,6 +9,21 @@ services:
     volumes:
       - ./data:/app/data
 
+
+  db:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+
   frontend:
     build: ./frontend
     container_name: frontend
@@ -36,5 +51,18 @@ services:
       - ./data:/var/lib/grafana
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
 
+  mlflow:
+    build: ./mlflow
+    container_name: mlflow
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://user:password@db:5432/mydatabase
+      - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
+    command: mlflow server --backend-store-uri postgresql://user:password@db:5432/mydatabase --default-artifact-root /mlflow/artifacts --host 0.0.0.0 --port 5000
+
 volumes:
   postgres_data:
+  mlflow_data:
