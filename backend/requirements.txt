@@ -5,3 +5,5 @@ psycopg2-binary
 pillow
 numpy
 python-multipart
+evidently
+prometheus_client

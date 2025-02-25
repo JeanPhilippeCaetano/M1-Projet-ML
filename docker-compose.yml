@@ -57,13 +57,8 @@ services:
     depends_on:
       - prometheus
     volumes:
-<<<<<<< HEAD
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning/datasources.yml:/etc/grafana/provisioning/datasources.yml
-=======
-      - ./data:/var/lib/grafana
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
->>>>>>> 335de9d6e8cfa052357e5dd598e5354d837fae10
 
   mlflow:
     build: ./mlflow
@@ -80,8 +75,5 @@ services:
 volumes:
   postgres_data:
   mlflow_data:
-<<<<<<< HEAD
   prometheus_data:
   grafana_data:
-=======
->>>>>>> 335de9d6e8cfa052357e5dd598e5354d837fae10
