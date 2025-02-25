@@ -9,7 +9,6 @@ services:
     volumes:
       - ./data:/app/data
 
-
   db:
     image: postgres:15
     container_name: postgres
@@ -33,16 +32,22 @@ services:
       - backend
 
   prometheus:
-    build: ./monitoring
+    image: prom/prometheus
     container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
     ports:
       - "9090:9090"
     depends_on:
-      - backend
+      - node_exporter
 
-
-
-
+  node_exporter:
+    image: prom/node-exporter
+    container_name: node_exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
 
   grafana:
     image: grafana/grafana
@@ -52,8 +57,8 @@ services:
     depends_on:
       - prometheus
     volumes:
-      - ./data:/var/lib/grafana
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/datasources.yml:/etc/grafana/provisioning/datasources.yml
 
   mlflow:
     build: ./mlflow
@@ -70,3 +75,5 @@ services:
 volumes:
   postgres_data:
   mlflow_data:
+  prometheus_data:
+  grafana_data:

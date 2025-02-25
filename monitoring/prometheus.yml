@@ -1,11 +1,12 @@
 global:
-  scrape_interval: 15s  # Collecte toutes les 15 secondes
+  scrape_interval: 15s  # Intervalle de collecte des métriques
 
 scrape_configs:
   - job_name: "node_exporter"
     static_configs:
-      - targets: ["localhost:9100"]
-      
+      - targets: ["node_exporter:9100"]  # Utiliser le nom du service Docker
+
   - job_name: "prometheus"
     static_configs:
-      - targets: ["localhost:9090"]
+      - targets: ["prometheus:9090"]  # Utiliser le nom du service Docker
+    
