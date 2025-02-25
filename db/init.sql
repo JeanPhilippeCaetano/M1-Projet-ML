@@ -1,0 +1,13 @@
+CREATE DATABASE STG_DB;
+CREATE USER user WITH ENCRYPTED PASSWORD 'password';
+GRANT ALL PRIVILEGES ON DATABASE STG_DB TO user;
+
+\c STG_DB;
+
+CREATE TABLE feedback (
+    id SERIAL PRIMARY KEY,
+    image_name TEXT NOT NULL,
+    predicted_result TEXT NOT NULL,
+    user_feedback BOOLEAN,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

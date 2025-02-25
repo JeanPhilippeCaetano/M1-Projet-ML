@@ -27,5 +27,10 @@ if uploaded_file is not None:
 
     if response.status_code == 200:
         st.json(response.json())  # Affiche les infos de l'image
+        if st.button('👍 Good prediction'):
+            st.write('good')
+        elif st.button('👎 Bad prediction'):
+            st.write('bad')
     else:
         st.error("Error: Unable to process the image")
+        
