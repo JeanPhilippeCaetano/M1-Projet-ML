@@ -40,6 +40,10 @@ services:
     depends_on:
       - backend
 
+
+
+
+
   grafana:
     image: grafana/grafana
     container_name: grafana
