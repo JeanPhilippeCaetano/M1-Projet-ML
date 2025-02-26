@@ -16,7 +16,7 @@ if uploaded_file is not None:
     st.image(image, caption="Image téléchargée", use_container_width=True)
 
     # Envoyer l'image au backend
-    API_URL = "http://backend:8000/predict"  # URL du backend
+    API_URL = "http://backend:8000/predict"  # URL backend
     files = {"file": uploaded_file.getvalue()}
     response = requests.post(API_URL, files=files)
 
