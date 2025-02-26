@@ -1,18 +1,20 @@
 from fastapi import FastAPI, File, UploadFile
-from evidently.dashboard import Dashboard
-from evidently.metrics import RegressionQualityMetric
 import io
 import numpy as np
 from PIL import Image
+import tensorflow as tf
 from prometheus_client import start_http_server, Gauge
 
 app = FastAPI()
 
+# Charger un modèle pré-entraîné (ex: MobileNetV2)
+model = tf.keras.applications.MobileNetV2(weights="imagenet")
+
 # Initialisation des métriques Prometheus
 model_metric = Gauge('model_predictions', 'Number of predictions made by the model')
 
-# Exemple de Dashboard Evidently
-dashboard = Dashboard(metrics=[RegressionQualityMetric()])  # a voir en fonction du model
+# Labels pour ImageNet
+imagenet_labels = {i: v for i, v in enumerate(tf.keras.applications.mobilenet_v2.decode_predictions(np.expand_dims(np.arange(1000), axis=0), top=1000)[0])}
 
 @app.get("/")
 def read_root():
@@ -22,23 +24,24 @@ def read_root():
 async def predict(file: UploadFile = File(...)):
     # Lire l'image en bytes
     image_bytes = await file.read()
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
-    # Convertir en objet PIL
-    image = Image.open(io.BytesIO(image_bytes))
-    image_array = np.array(image)
+    # Prétraitement de l'image pour le modèle
+    image = image.resize((224, 224))  # Redimensionner
+    image_array = np.array(image) / 255.0  # Normaliser
+    image_array = np.expand_dims(image_array, axis=0)  # Ajouter la dimension batch
 
-    prediction = image_array.shape  # predict
+    # Faire la prédiction
+    predictions = model.predict(image_array)
+    decoded_predictions = tf.keras.applications.mobilenet_v2.decode_predictions(predictions, top=1)[0]
 
-    # Mettre à jour les métriques Prometheus
+    # Mettre à jour Prometheus
     model_metric.inc()
 
+    # Retourner les résultats
     return {
         "filename": file.filename,
-        "format": image.format,
-        "mode": image.mode,
-        "size": image.size,
-        "shape": image_array.shape
+        "predictions": [{"label": pred[1], "confidence": float(pred[2])} for pred in decoded_predictions]
     }
 
-
-start_http_server(8001)  # port de scrapping metrics
+start_http_server(8001)  # Scraper Prometheus

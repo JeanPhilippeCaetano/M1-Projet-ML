@@ -1,9 +1,7 @@
-fastapi
-uvicorn
-psycopg2
-psycopg2-binary
-pillow
-numpy
-python-multipart
-evidently
+fastapi 
+uvicorn 
+tensorflow 
+pillow 
 prometheus_client
+evidently
+python-multipart
