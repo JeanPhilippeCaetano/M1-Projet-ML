@@ -1,5 +1,5 @@
-train: ./yolo_dataset/images/train
-val: ./yolo_dataset/images/test
+train: C:/Users/assak/OneDrive - Ynov/Data enginering/Machine Learning/Projet ML/M1-Projet-ML/yolo_dataset/images/train
+val: C:/Users/assak/OneDrive - Ynov/Data enginering/Machine Learning/Projet ML/M1-Projet-ML/yolo_dataset/images/test
 
 nc: 3  # Nombre de classes
 names: ["apple", "banana", "orange"]
