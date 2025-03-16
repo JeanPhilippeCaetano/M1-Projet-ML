@@ -15,12 +15,14 @@ services:
     container_name: postgres
     restart: always
     environment:
-      POSTGRES_DB: mydatabase
+      POSTGRES_DB: postgres  # On laisse "postgres" pour pouvoir créer d'autres bases
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db/init-mydatabase.sql:/docker-entrypoint-initdb.d/init-mydatabase.sql
+      - ./db/init-mlflow.sql:/docker-entrypoint-initdb.d/init-mlflow.sql
+      - ./db/init-stg-db.sql:/docker-entrypoint-initdb.d/init-stg-db.sql
     ports:
       - "5432:5432"
 
@@ -59,9 +61,9 @@ services:
     depends_on:
       - db
     environment:
-      - MLFLOW_BACKEND_STORE_URI=postgresql://user:password@db:5432/mydatabase
+      - MLFLOW_BACKEND_STORE_URI=postgresql://user:password@db:5432/MLFLOW
       - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
-    command: mlflow server --backend-store-uri postgresql://user:password@db:5432/mydatabase --default-artifact-root /mlflow/artifacts --host 0.0.0.0 --port 5000
+    command: mlflow server --backend-store-uri postgresql://user:password@db:5432/MLFLOW --default-artifact-root /mlflow/artifacts --host 0.0.0.0 --port 5000
 
 volumes:
   postgres_data:

@@ -31,6 +31,7 @@ if uploaded_file is not None:
             st.write('good')
         elif st.button('👎 Bad prediction'):
             st.write('bad')
+            true_response = st.text_input('Correction : ')
     else:
         st.error("Error: Unable to process the image")
         
