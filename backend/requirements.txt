@@ -1,7 +1,8 @@
-fastapi 
-uvicorn 
-tensorflow 
-pillow 
+fastapi
+numpy
+tensorflow
+Pillow
 prometheus_client
 evidently
+pandas
 python-multipart

@@ -59,6 +59,16 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning/datasources.yml:/etc/grafana/provisioning/datasources.yml
+      
+  evidently:
+    build: ./monitoring
+    container_name: evidently
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - backend
 
   mlflow:
     build: ./mlflow
