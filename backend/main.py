@@ -12,6 +12,7 @@ from evidently.report import Report
 from evidently.metric_preset import DataDriftPreset
 from prometheus_client import start_http_server
 from prometheus_fastapi_instrumentator import Instrumentator
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
 # Charger le modèle MobileNetV2
@@ -27,12 +28,14 @@ prediction_history = []
 
 app = FastAPI()
 
+# test pour grafana 
 def generate_fake_predictions():
     """ Génère des données factices pour tester Grafana """
     return {"label": f"Classe_{random.randint(1, 5)}", "confidence": round(random.uniform(0.5, 1.0), 2)}
 
+# Route predict
 @app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+async def predict(file: UploadFile = File(...), feedback: bool = False, true_label: str = None):
     image_bytes = await file.read()
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     image = image.resize((224, 224))
@@ -46,14 +49,34 @@ async def predict(file: UploadFile = File(...)):
 
     # Sauvegarder les prédictions pour Evidently
     prediction_history.append({"label": decoded_predictions[0][1], "confidence": float(decoded_predictions[0][2])})
-    
-    print(f"[METRICS] Nouvelle prédiction ajoutée: {prediction_history[-1]}")
+
+    # Si l'utilisateur donne un feedback négatif, enregistrer l'image pour un réentraînement
+    if feedback and true_label:
+        save_feedback(file.filename, true_label)
 
     return {
         "filename": file.filename,
         "predictions": [{"label": pred[1], "confidence": float(pred[2])} for pred in decoded_predictions]
     }
 
+# Save feedback
+def save_feedback(filename, true_label):
+    """ Sauvegarder les images mal classées pour réentraînement le modèle """
+    feedback_dir = "feedback/"
+    os.makedirs(feedback_dir, exist_ok=True)
+    feedback_image_path = os.path.join(feedback_dir, filename)
+    
+    # Sauvegarder l'image
+    with open(feedback_image_path, "wb") as f:
+        f.write(filename)
+
+    # Ajouter l'entrée dans le CSV pour l'étiquetage correct
+    df = pd.read_csv("feedback/labels.csv")
+    df = df.append({"filename": filename, "label": true_label}, ignore_index=True)
+    df.to_csv("feedback/labels.csv", index=False)
+
+
+# Get drift model report for graf
 @app.get("/drift-report")
 async def drift_report():
     if len(prediction_history) < 3:
@@ -84,9 +107,8 @@ async def drift_report():
     return report_json
 
 
+
 Instrumentator().instrument(app).expose(app)
-
-
 @app.get("/metrics")
 async def metrics():
     try:
