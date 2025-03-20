@@ -1,7 +1,11 @@
 fastapi
-uvicorn
-psycopg2
-psycopg2-binary
-pillow
 numpy
+tensorflow
+Pillow
+prometheus_client
+evidently
+pandas
 python-multipart
+psycopg2
+pydantic
+mlflow
