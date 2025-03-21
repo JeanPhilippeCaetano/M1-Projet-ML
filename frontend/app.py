@@ -59,7 +59,7 @@ if uploaded_file is not None:
                 
                 # Stocker la prédiction pour le feedback
                 st.session_state.last_prediction = prediction
-                st.session_state.last_image_name = data.get("filename", uploaded_file.name)
+                st.session_state.last_image_name = data["filename"]
             else:
                 st.error(f"Erreur : Impossible de traiter l'image. Code d'erreur : {response.status_code}")
 

@@ -1,7 +1,8 @@
+from datetime import datetime
 import os
 import requests
 import psycopg2
-from objects.Feedback import increment_negative_feedback, reset_negative_feedback, save_feedback
+from objects.Feedback import get_negative_feedback_dataframe, increment_negative_feedback, launch_training, reset_negative_feedback, save_feedback
 import mlflow
 import mlflow.pyfunc
 import numpy as np
@@ -17,6 +18,9 @@ import json
 import tensorflow as tf
 
 app = FastAPI()
+
+ARCHIVE_DIR = "archived_images"
+os.makedirs(ARCHIVE_DIR, exist_ok=True)  # Crée le dossier s'il n'existe pas
 
 # Définition du modèle de feedback
 class Feedback(BaseModel):
@@ -62,6 +66,19 @@ async def predict(file: UploadFile = File(...)):
     image_array = np.array(image) / 255.0
     image_array = np.expand_dims(image_array, axis=0)
 
+    # Générer un nom de fichier unique avec timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{timestamp}_{file.filename}"
+
+    # Make sure we have a valid extension
+    if not any(filename.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']):
+        # Default to PNG if no valid extension
+        filename = f"{filename}.png"
+        
+    image_path = os.path.join(ARCHIVE_DIR, filename)
+
+    # Sauvegarder l'image dans le dossier "archived_images" with explicit format
+    image.save(image_path, format="PNG")
     # Prédiction avec le modèle MLflow
     predictions = model.predict(image_array)
     predicted_label = predictions.argmax(axis=1)[0]
@@ -72,7 +89,7 @@ async def predict(file: UploadFile = File(...)):
     prediction_history.append({"label": str(predicted_label), "confidence": float(predictions.max())})
 
     return {
-        "filename": file.filename,
+        "filename": filename,
         "predictions": [{"label": str(predicted_label), "confidence": float(predictions.max())}]
     }
 
@@ -119,7 +136,8 @@ async def feedback(feedback_data: Feedback):
         negative_count = increment_negative_feedback()
 
         if negative_count >= 5:
-            reset_negative_feedback()
+            launch_training()
+
             return {"message": "Feedback enregistré. Retraining déclenché."}
 
-    return {"message": "Feedback enregistré."}
+    return {"message": "Feedback enregistré. " + image_name}
