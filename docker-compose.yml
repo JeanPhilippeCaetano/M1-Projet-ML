@@ -8,6 +8,9 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data
+      - archived_images:/backend/archived_images
+    networks:
+      - monitoring_network
 
   db:
     image: postgres:15
@@ -19,7 +22,7 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
 
@@ -32,11 +35,8 @@ services:
       - backend
 
   prometheus:
-    image: prom/prometheus
+    build: ./monitoring
     container_name: prometheus
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
     ports:
       - "9090:9090"
     depends_on:
@@ -85,7 +85,8 @@ services:
     command: mlflow server --backend-store-uri postgresql://user:password@db:5432/mydatabase --default-artifact-root /mlflow/artifacts --host 0.0.0.0 --port 5000
 
 volumes:
+  archived_images:
   postgres_data:
   mlflow_data:
-  prometheus_data:
   grafana_data:
+  prometheus_data:

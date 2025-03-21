@@ -6,4 +6,7 @@ prometheus_client
 evidently
 pandas
 python-multipart
+psycopg2
+pydantic
+mlflow
 prometheus_fastapi_instrumentator
