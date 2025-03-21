@@ -1,3 +1,5 @@
+from fastapi.responses import PlainTextResponse
+from prometheus_client import Gauge, generate_latest
 from datetime import datetime
 import os
 import requests
@@ -17,9 +19,24 @@ import pandas as pd
 import json
 import tensorflow as tf
 
+import json
+CLASS_INDEX_PATH = "/backend/class_indices.json"
+
+# Load class indices for decoding predictions
+if os.path.exists(CLASS_INDEX_PATH):
+    with open(CLASS_INDEX_PATH, "r") as f:
+        class_indices = json.load(f)
+    index_to_class = {v: k for k, v in class_indices.items()}
+    print("[INFO] Custom class mapping loaded.")
+else:
+    # Fallback to ImageNet labels
+    class_indices = None
+    index_to_class = None
+    print("[INFO] No class_indices.json found. Using ImageNet decode_predictions.")
+
 app = FastAPI()
 
-ARCHIVE_DIR = "archived_images"
+ARCHIVE_DIR = "/backend/archived_images"
 os.makedirs(ARCHIVE_DIR, exist_ok=True)  # Crée le dossier s'il n'existe pas
 
 # Définition du modèle de feedback
@@ -60,11 +77,18 @@ def load_latest_model():
 # Charger le dernier modèle validé dans MLflow
 model = load_latest_model()
 
-# Métrique Prometheus
+# Prometheus Metrics
 model_metric = Gauge('model_predictions', 'Nombre de prédictions du modèle')
+drift_metric = Gauge('dataset_drift', 'Indice de drift des données')
 
-# Historique des prédictions pour Evidently
+# Historique des prédictions
 prediction_history = []
+
+app = FastAPI()
+
+@app.get("/")
+async def hello():
+    return {"message":"hello world !"}
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...), filename: str = Form(...)):
@@ -78,32 +102,34 @@ async def predict(file: UploadFile = File(...), filename: str = Form(...)):
     image_array = np.array(image) / 255.0
     image_array = np.expand_dims(image_array, axis=0)
 
-    # Générer un nom de fichier unique avec timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # filename = f"{timestamp}_{file.filename}"
-
-    # Make sure we have a valid extension
-    # if not any(filename.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']):
-    #     # Default to PNG if no valid extension
-    #     filename = f"{filename}.png"
-    print("filename : ",filename)
     image_path = os.path.join(ARCHIVE_DIR, filename)
-    print("image_path : ", image_path)
     # Sauvegarder l'image dans le dossier "archived_images" with explicit format
     image.save(image_path)
     # Prédiction avec le modèle MLflow
     predictions = model.predict(image_array)
-    predicted_label = predictions.argmax(axis=1)[0]
-
+    print(predictions)
+    # decoded_predictions = tf.keras.applications.mobilenet_v2.decode_predictions(predictions, top=1)[0]
     model_metric.inc()
+    if index_to_class:
+        predicted_index = int(np.argmax(predictions[0]))
+        predicted_label = index_to_class[predicted_index]
+        predicted_confidence = float(predictions[0][predicted_index])
+    else:
+        # fallback: use ImageNet decoding
+        decoded = tf.keras.applications.mobilenet_v2.decode_predictions(predictions, top=1)[0][0]
+        predicted_label = decoded[1]
+        predicted_confidence = float(decoded[2])
 
     # Sauvegarder les prédictions pour Evidently
-    prediction_history.append({"label": str(predicted_label), "confidence": float(predictions.max())})
-
+    prediction_history.append({"label": predicted_label, "confidence": predicted_confidence})
+    print(f"[DEBUG] New prediction: {prediction_history[-1]}")
     return {
-        "filename": filename,
-        "predictions": [{"label": str(predicted_label), "confidence": float(predictions.max())}]
-    }
+    "filename": filename,
+    "predictions": [{
+        "label": predicted_label,
+        "confidence": predicted_confidence
+    }]
+}
 
 @app.get("/drift-report")
 async def drift_report():
@@ -119,19 +145,17 @@ async def drift_report():
     current_data = df.iloc[len(df) // 2:] 
 
     report.run(reference_data=reference_data, current_data=current_data)
+    report_json = json.loads(report.json())
 
-    return json.loads(report.json())
+    # Récupérer les résultats du drift
+    drift_result = report_json['metrics'][0]['result']['dataset_drift']
 
-@app.post("/refresh-model")
-async def refresh_model():
-    """ Recharge le modèle depuis MLflow en cas de mise à jour """
-    global model
-    model = load_latest_model()
+    # Exposer la métrique de drift dans Prometheus
+    drift_metric.set(drift_result)
 
-    if model:
-        return {"message": "Modèle MLflow mis à jour avec succès"}
-    else:
-        return {"error": "Échec du chargement du modèle MLflow"}
+    return report_json
+
+
 
 @app.post("/feedback")
 async def feedback(feedback_data: Feedback):
@@ -153,3 +177,8 @@ async def feedback(feedback_data: Feedback):
             return {"message": "Feedback enregistré. Retraining déclenché."}
 
     return {"message": "Feedback enregistré. " + image_name}
+
+@app.get("/metrics", response_class=PlainTextResponse)
+async def metrics():
+    # Cette route permet à Prometheus de récupérer les métriques au format texte brut
+    return generate_latest()

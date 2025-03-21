@@ -2,6 +2,11 @@ global:
   scrape_interval: 15s  # Intervalle de collecte des métriques
 
 scrape_configs:
+  - job_name: 'backend'
+    # metrics_path: '/metrics'
+    static_configs:
+      - targets: ['backend:8000']
+
   - job_name: "node_exporter"
     static_configs:
       - targets: ["node_exporter:9100"]
@@ -10,12 +15,10 @@ scrape_configs:
     static_configs:
       - targets: ["prometheus:9090"]
 
-  - job_name: "fastapi"
-    static_configs:
-      - targets: ["backend:8000"]
 
   - job_name: "evidently"
     static_configs:
-      - targets: ["backend:8001"]  # L'endpoint des métriques
+      - targets: ['evidently:9090']
         labels:
           service: "evidently"
+    metrics_path: "/metrics"

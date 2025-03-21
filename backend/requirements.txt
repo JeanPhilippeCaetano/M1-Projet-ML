@@ -9,3 +9,4 @@ python-multipart
 psycopg2
 pydantic
 mlflow
+prometheus_fastapi_instrumentator

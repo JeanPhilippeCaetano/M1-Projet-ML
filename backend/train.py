@@ -1,7 +1,9 @@
 from datetime import datetime
+import json
 import pandas as pd
 import psycopg2
 from objects.Feedback import get_negative_feedback_dataframe, reset_negative_feedback
+from mlflow.models.signature import infer_signature
 import mlflow
 import mlflow.tensorflow
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -143,9 +145,26 @@ def main():
             verbose=1
         )
 
+        # Take a single batch from the generator to infer signature
+        sample_batch = next(train_generator)
+        input_example = sample_batch[0]
+        output_example = model.predict(input_example)
+
+        signature = infer_signature(input_example, output_example)
+
         print("Étape 7: Sauvegarde du modèle")     
         # Enregistrer le modèle dans MLflow
-        mlflow.tensorflow.log_model(model, "model")
+        class_indices_path = "/backend/class_indices.json"
+        with open(class_indices_path, "w") as f:
+            json.dump(train_generator.class_indices, f)
+        print(f"Mapping des classes sauvegardé dans: {class_indices_path}")
+
+        mlflow.tensorflow.log_model(
+            model,
+            artifact_path="model",
+            signature=signature,
+            input_example=input_example
+        )        
         print("Modèle enregistré dans MLflow")
     
     print("Étape 8: Réinitialisation du compteur de feedback")
