@@ -6,7 +6,7 @@ from objects.Feedback import get_negative_feedback_dataframe, increment_negative
 import mlflow
 import mlflow.pyfunc
 import numpy as np
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile
 import io
 from PIL import Image
 from prometheus_client import Gauge
@@ -32,20 +32,33 @@ class Feedback(BaseModel):
 # Connexion à MLflow
 MLFLOW_TRACKING_URI = "http://mlflow:5000"
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_experiment("Réentrainement MobileNet V2")
+experiment = mlflow.get_experiment_by_name("Réentrainement MobileNet V2")
 
 def load_latest_model():
     """ Charge dynamiquement le dernier modèle MobileNetV2 enregistré dans MLflow """
     try:
-        model_uri = f"models:/mobilenet_v2/Production"  # On récupère la version validée en "Production"
-        print(f"🔄 Chargement du modèle depuis MLflow : {model_uri}")
-        return mlflow.pyfunc.load_model(model_uri)
+        # Obtenir le dernier run de l'expérience
+        runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id], order_by=["start_time DESC"], max_results=1)
+        
+        if not runs.empty:
+            run_id = runs.iloc[0]['run_id']
+            model_uri = f"runs:/{run_id}/model"
+            model = mlflow.tensorflow.load_model(model_uri)
+            print(f"Modèle chargé avec succès depuis MLflow (run_id: {run_id})")
+        else:
+            raise Exception("Aucun run trouvé dans l'expérience")
+            
     except Exception as e:
-        print(f"❌ Erreur lors du chargement du modèle : {e}")
-        return None
+        print(f"Erreur lors du chargement du modèle depuis MLflow: {e}")
+        # Fallback : charger MobileNetV2 depuis Keras si le modèle MLflow n'est pas disponible
+        model = tf.keras.applications.MobileNetV2(weights="imagenet")
+        print("Modèle MobileNetV2 d'origine chargé depuis Keras")
+    
+    return model
 
 # Charger le dernier modèle validé dans MLflow
-model = tf.keras.applications.MobileNetV2(weights="imagenet")
-
+model = load_latest_model()
 
 # Métrique Prometheus
 model_metric = Gauge('model_predictions', 'Nombre de prédictions du modèle')
@@ -54,9 +67,8 @@ model_metric = Gauge('model_predictions', 'Nombre de prédictions du modèle')
 prediction_history = []
 
 @app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+async def predict(file: UploadFile = File(...), filename: str = Form(...)):
     global model
-
     if model is None:
         return {"error": "Modèle MLflow non disponible"}
 
@@ -68,17 +80,17 @@ async def predict(file: UploadFile = File(...)):
 
     # Générer un nom de fichier unique avec timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{timestamp}_{file.filename}"
+    # filename = f"{timestamp}_{file.filename}"
 
     # Make sure we have a valid extension
-    if not any(filename.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']):
-        # Default to PNG if no valid extension
-        filename = f"{filename}.png"
-        
+    # if not any(filename.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']):
+    #     # Default to PNG if no valid extension
+    #     filename = f"{filename}.png"
+    print("filename : ",filename)
     image_path = os.path.join(ARCHIVE_DIR, filename)
-
+    print("image_path : ", image_path)
     # Sauvegarder l'image dans le dossier "archived_images" with explicit format
-    image.save(image_path, format="PNG")
+    image.save(image_path)
     # Prédiction avec le modèle MLflow
     predictions = model.predict(image_array)
     predicted_label = predictions.argmax(axis=1)[0]

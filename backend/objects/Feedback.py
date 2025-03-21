@@ -42,7 +42,7 @@ def reset_negative_feedback():
 def launch_training():
     """ Exécute le script train.py en arrière-plan """
     script_path = os.path.join(os.getcwd(), "train.py")  # Assure-toi que le fichier est bien à la racine du projet
-    subprocess.Popen(["python", script_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.Popen(["python", script_path])
 
 
 def get_negative_feedback_dataframe():

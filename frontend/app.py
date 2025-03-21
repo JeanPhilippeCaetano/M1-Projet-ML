@@ -44,7 +44,8 @@ if uploaded_file is not None:
         with st.spinner("Classification en cours..."):
             # Envoyer l'image au backend
             files = {"file": uploaded_file.getvalue()}
-            response = requests.post(API_URL, files=files)
+            data = {"filename": uploaded_file.name}
+            response = requests.post(API_URL, files=files, data=data)
             
             if response.status_code == 200:
                 data = response.json()
@@ -59,7 +60,7 @@ if uploaded_file is not None:
                 
                 # Stocker la prédiction pour le feedback
                 st.session_state.last_prediction = prediction
-                st.session_state.last_image_name = data["filename"]
+                st.session_state.last_image_name = uploaded_file.name
             else:
                 st.error(f"Erreur : Impossible de traiter l'image. Code d'erreur : {response.status_code}")
 

@@ -32,8 +32,6 @@ def main():
     # Activer l'autolog de TensorFlow pour MLflow
     mlflow.tensorflow.autolog()
     
-    # Chemin vers le modèle sauvegardé
-    
     try:
         # Obtenir le dernier run de l'expérience
         runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id], order_by=["start_time DESC"], max_results=1)
@@ -53,6 +51,15 @@ def main():
         print("Modèle MobileNetV2 d'origine chargé depuis Keras")
     
     print("Étape 4: Préparation du générateur de données")
+
+    # Avant de créer le générateur
+    print("Fichiers à traiter:")
+    for idx, filename in enumerate(df['filename']):
+        print(f"Contenu: {os.listdir('/backend/archived_images')}")
+        full_path = os.path.join("/backend/archived_images", filename)
+        print(f"{idx+1}. Recherche du fichier: {full_path} (existe: {os.path.exists(full_path)})")
+
+
     # Préparer les données d'entraînement - Utiliser le générateur d'images
     # Ici on suppose que les chemins dans df['filename'] sont corrects
     datagen = ImageDataGenerator(
@@ -63,34 +70,50 @@ def main():
         shear_range=0.2,
         zoom_range=0.2,
         horizontal_flip=True,
-        fill_mode='nearest'
+        fill_mode='nearest',
+        validation_split=0.2  # Ajouter une validation split pour surveiller l'apprentissage
     )
-    # After loading the model, but before compiling it:
-    # 1. Count your unique classes
-    num_classes = len(df['label'].unique())
-
-    # 2. Remove the top layer of MobileNetV2
-    base_model = model
-    x = base_model.layers[-2].output  # Get the output of the second-to-last layer
-
-    # 3. Add a new classification layer
-    x = tf.keras.layers.Dense(num_classes, activation='softmax')(x)
-    model = tf.keras.Model(inputs=base_model.input, outputs=x)
-
-    print("Étape 5: Configuration du modèle pour fine-tuning")
+    
+    # Vérifier les classes uniques dans df
+    unique_classes = df['label'].unique()
+    num_classes = len(unique_classes)
+    print(f"Classes détectées: {unique_classes}")
+    print(f"Nombre de classes: {num_classes}")
+    
     # Créer le générateur à partir du DataFrame
-    # Si les chemins sont absolus, utiliser directory=None
-    # Si les chemins sont relatifs, spécifier le répertoire de base
     train_generator = datagen.flow_from_dataframe(
         dataframe=df,
-        directory="backend/archived_images",  # Utiliser None si les chemins dans df['filename'] sont absolus
+        directory="/backend/archived_images",
         x_col="filename",
         y_col="label",
         target_size=(224, 224),
-        batch_size=4,  # Petit batch size pour le fine-tuning
-        class_mode="categorical"
+        batch_size=4,
+        class_mode="categorical",  # S'assurer que c'est en mode catégorique
+        shuffle=True
     )
     
+    # Vérifier les classes du générateur
+    print(f"Mapping des classes du générateur: {train_generator.class_indices}")
+    print(f"Forme des données (batch): {next(train_generator)[0].shape}, {next(train_generator)[1].shape}")
+    
+    # Réinitialiser le générateur après vérification
+    train_generator.reset()
+    
+    # Modifier le modèle pour correspondre au nombre correct de classes
+    base_model = model
+    
+    # Reconstruire le modèle avec le bon nombre de classes en sortie
+    if hasattr(base_model, 'layers') and len(base_model.layers) > 1:
+        x = base_model.layers[-2].output
+    else:
+        # Si le modèle n'a pas la structure attendue, prenez la sortie avant la couche de classification
+        x = base_model.get_layer('global_average_pooling2d').output
+    
+    # Créer une nouvelle couche de sortie avec le bon nombre de classes
+    predictions = tf.keras.layers.Dense(num_classes, activation='softmax')(x)
+    model = tf.keras.Model(inputs=base_model.input, outputs=predictions)
+    
+    print("Étape 5: Configuration du modèle pour fine-tuning")
     # Garder les poids des couches préentraînées fixes pour éviter d'oublier
     for layer in model.layers[:-3]:
         layer.trainable = False
@@ -101,10 +124,14 @@ def main():
     
     # Compiler le modèle pour le fine-tuning
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),  # Faible taux d'apprentissage
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
         loss="categorical_crossentropy",
         metrics=["accuracy"]
     )
+    
+    # Vérifier la forme de sortie du modèle
+    print(f"Forme de sortie du modèle: {model.output_shape}")
+    
     print("Étape 6: Démarrage de l'entraînement")
     # Démarrer un run MLflow pour suivre l'expérience
     with mlflow.start_run(experiment_id=experiment.experiment_id, run_name='FineTuning_' + datetime.now().strftime("%Y%m%d_%H%M%S")):
