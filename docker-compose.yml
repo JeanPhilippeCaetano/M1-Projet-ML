@@ -8,8 +8,6 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data
-    networks:
-      - monitoring_network
 
   db:
     image: postgres:15
@@ -24,8 +22,6 @@ services:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
-    networks:
-      - monitoring_network
 
   frontend:
     build: ./frontend
@@ -34,8 +30,6 @@ services:
       - "8501:8501"
     depends_on:
       - backend
-    networks:
-      - monitoring_network
 
   prometheus:
     image: prom/prometheus
@@ -48,8 +42,6 @@ services:
     depends_on:
       - node_exporter
       - evidently
-    networks:
-      - monitoring_network
 
   node_exporter:
     image: prom/node-exporter
@@ -57,8 +49,6 @@ services:
     restart: unless-stopped
     ports:
       - "9100:9100"
-    networks:
-      - monitoring_network
 
   grafana:
     image: grafana/grafana
@@ -70,8 +60,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning/datasources.yml:/etc/grafana/provisioning/datasources.yml
-    networks:
-      - monitoring_network
+
       
   evidently:
     build: ./monitoring
@@ -82,8 +71,6 @@ services:
       - ./data:/app/data
     depends_on:
       - backend
-    networks:
-      - monitoring_network
 
   mlflow:
     build: ./mlflow
@@ -96,12 +83,6 @@ services:
       - MLFLOW_BACKEND_STORE_URI=postgresql://user:password@db:5432/mydatabase
       - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
     command: mlflow server --backend-store-uri postgresql://user:password@db:5432/mydatabase --default-artifact-root /mlflow/artifacts --host 0.0.0.0 --port 5000
-    networks:
-      - monitoring_network
-
-networks:
-  monitoring_network:
-    driver: bridge
 
 volumes:
   postgres_data:

@@ -1,5 +1,6 @@
 from prometheus_client import Gauge, generate_latest
 from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import PlainTextResponse
 import io
 import json
 import subprocess
@@ -11,6 +12,8 @@ import pandas as pd
 from evidently.report import Report
 from evidently.metric_preset import DataDriftPreset
 from prometheus_client import start_http_server, make_asgi_app
+from prometheus_fastapi_instrumentator import Instrumentator
+
 
 # Charger le modèle MobileNetV2
 model = tf.keras.applications.MobileNetV2(weights="imagenet")
@@ -24,6 +27,10 @@ drift_metric = Gauge('dataset_drift', 'Indice de drift des données')
 prediction_history = []
 
 app = FastAPI()
+
+# Instrumenter l'application FastAPI avec Prometheus
+instrumentator = Instrumentator()
+instrumentator.add(app)
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
@@ -70,7 +77,8 @@ async def drift_report():
 
     return report_json
 
-@app.get("/metrics")
+# Exposer les métriques Prometheus via un endpoint dédié
+@app.get("/metrics", response_class=PlainTextResponse)
 async def metrics():
-    # Cette route permet à Prometheus de récupérer les métriques
+    # Cette route permet à Prometheus de récupérer les métriques au format texte brut
     return generate_latest()
