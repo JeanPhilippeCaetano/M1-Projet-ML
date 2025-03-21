@@ -11,21 +11,27 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    # Affichage de l'image
     image = Image.open(uploaded_file)
     st.image(image, caption="Image téléchargée", use_container_width=True)
 
-    # Convertir l'image en bytes pour l'envoi
-    # img_bytes = io.BytesIO()
-    # image.save(img_bytes, format="JPEG")
-    # img_bytes = img_bytes.getvalue()
-
-    # Envoi à l'API (à adapter selon ton API)
-    API_URL = "http://backend:8000/predict"  # Remplace par ton URL d'API
+    API_URL = "http://backend:8000/predict"
     files = {"file": uploaded_file.getvalue()}
     response = requests.post(API_URL, files=files)
 
     if response.status_code == 200:
-        st.json(response.json())  # Affiche les infos de l'image
+        data = response.json()
+        st.subheader("Résultat de la prédiction :")
+        prediction = data["predictions"][0]["label"]
+        confidence = data["predictions"][0]["confidence"]
+        st.write(f"Prédiction : **{prediction}** avec confiance **{confidence:.2f}**")
+
+        # Boutons de feedback
+        if st.button("👍 Correct"):
+            requests.post(f"http://backend:8000/feedback", json={"label": prediction, "feedback": "positive"})
+            st.success("Merci pour votre feedback !")
+
+        if st.button("👎 Incorrect"):
+            requests.post(f"http://backend:8000/feedback", json={"label": prediction, "feedback": "negative"})
+            st.warning("Feedback enregistré, merci !")
     else:
-        st.error("Error: Unable to process the image")
+        st.error("Erreur : Impossible de traiter l'image")
