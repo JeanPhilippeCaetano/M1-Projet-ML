@@ -1,12 +1,12 @@
-# Projet MLOps - Détection d'intrusion avec KDDCUP99
+# Projet MLOps - Classification de fruits
 
-Ce projet implémente une solution MLOps complète pour la détection d'intrusions réseau en utilisant le dataset KDDCUP99. Il inclut le pipeline de traitement des données, l'entraînement du modèle, l'API de prédiction, ainsi que la surveillance et la visualisation des métriques.
+Ce projet implémente une solution MLOps complète pour la classification de fruit. Il inclut la pipeline de traitement des données, l'API de prédiction, ainsi que la surveillance et la visualisation des métriques.
 
 ## Architecture du projet
 
-- **Modèle ML** : Détection d'intrusion réseau basée sur KDDCUP99
+- **Modèle ML** : CLassification d'images via le model MobileNetV2
 - **API** : FastAPI pour servir les prédictions
-- **Monitoring** : Prometheus pour la collecte de métriques
+- **Monitoring** : Prometheus pour la collecte de métriques + node exporter et evidently
 - **Visualisation** : Dashboards Grafana
 - **Conteneurisation** : Docker et docker-compose
 
@@ -19,8 +19,8 @@ Ce projet implémente une solution MLOps complète pour la détection d'intrusio
 
 1. Cloner le dépôt :
    ```bash
-   git clone https://github.com/votre-username/mlops-kddcup99.git
-   cd mlops-kddcup99
+   git clone https://github.com/JeanPhilippeCaetano/M1-Projet-ML
+   cd M1-Projet-ML
    ```
 
 2. Lancer les services :
@@ -29,10 +29,12 @@ Ce projet implémente une solution MLOps complète pour la détection d'intrusio
    ```
 
    Cette commande démarre tous les services nécessaires :
-   - API de prédiction
+   - FASTAPI
    - Prometheus
    - Grafana
-   - Autres services de l'infrastructure
+   - node exporter
+   - Evidently
+   - PGSQL
 
 3. Accéder aux interfaces :
    - API : http://localhost:8000
@@ -56,7 +58,7 @@ Ce projet implémente une solution MLOps complète pour la détection d'intrusio
 
 ## Utilisation
 
-L'API expose plusieurs endpoints pour effectuer des prédictions sur des données réseau. Consultez la documentation de l'API disponible à l'adresse http://localhost:8000/docs pour plus de détails.
+L'API expose plusieurs endpoints pour effectuer des prédictions sur vos images de fruits.
 
 ## Arrêt des services
 
