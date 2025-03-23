@@ -9,8 +9,6 @@ services:
     volumes:
       - ./data:/app/data
       - archived_images:/backend/archived_images
-    networks:
-      - monitoring_network
 
   db:
     image: postgres:15
