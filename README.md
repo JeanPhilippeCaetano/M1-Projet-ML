@@ -1,11 +1,14 @@
 # Projet MLOps - Classification de fruits
 
-Ce projet implémente une solution MLOps complète pour la classification de fruit. Il inclut la pipeline de traitement des données, l'API de prédiction, ainsi que la surveillance et la visualisation des métriques.
+Ce projet implémente une solution MLOps complète pour la classification de fruit. 
+Il inclut le pipeline de traitement des données, l'API de prédiction, l'utilisation de Mlflow,  ainsi que la surveillance et la visualisation des différentes métriques.
 
 ## Architecture du projet
 
-- **Modèle ML** : CLassification d'images via le model MobileNetV2
-- **API** : FastAPI pour servir les prédictions
+- **Modèle ML** : Classification d'images via le modèle MobileNetV2
+- **Frontend** : Interface de l'application
+- **Mlflow** : Entraînement et sauvegarde du modèle
+- **API (backend)** : FastAPI pour servir les prédictions
 - **Monitoring** : Prometheus pour la collecte de métriques + node exporter et evidently
 - **Visualisation** : Dashboards Grafana
 - **Conteneurisation** : Docker et docker-compose
@@ -30,16 +33,20 @@ Ce projet implémente une solution MLOps complète pour la classification de fru
 
    Cette commande démarre tous les services nécessaires :
    - FASTAPI
+   - Streamlit
    - Prometheus
    - Grafana
-   - node exporter
+   - Node exporter
    - Evidently
+   - Mlflow
    - PGSQL
 
 3. Accéder aux interfaces :
-   - API : http://localhost:8000
+   - Streamlit (frontend) : http://localhost:8501
+   - Fastapi (backend) : http://localhost:8000
    - Prometheus : http://localhost:9090
    - Grafana : http://localhost:3000
+   - Mlflow : http://localhost:5000
 
 ## Configuration de Grafana
 
@@ -59,6 +66,8 @@ Ce projet implémente une solution MLOps complète pour la classification de fru
 ## Utilisation
 
 L'API expose plusieurs endpoints pour effectuer des prédictions sur vos images de fruits.
+Vous pouvez utiliser l'interface web streamlit, déposer une image png d'un fruit. Ensuite il faudra cliquer sur 'classifier' et la prédiction s'affichera. 
+N'hésitez pas à donner un feedback si jamais la prédiction n'est pas bonne ! Au bout de 5 retours, le modèle pourra se réentraîner automatiquement.
 
 ## Arrêt des services
 
