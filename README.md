@@ -45,7 +45,7 @@ Il inclut le pipeline de traitement des données, l'API de prédiction, l'utilis
    - Streamlit (frontend) : http://localhost:8501
    - Fastapi (backend) : http://localhost:8000
    - Prometheus : http://localhost:9090
-   - Grafana : http://localhost:3000
+   - Grafana : http://localhost:3200
    - Mlflow : http://localhost:5000
 
 ## Configuration de Grafana
